@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="app-version" content="v20.7">
+<title>Half Scoreboard — v20.7</title>
+<style>
+:root{
+  --board:#12361f;
+  --accent:#ffd28a;
+  --chalk:#f3f7ee;
+  --total-bg:#5a1414;
+}
+body{
+  margin:0;
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: var(--board);
+  color:var(--chalk);
+  -webkit-font-smoothing:antialiased;
+  display:flex;
+  justify-content:center;
+  padding:4px;
+}
+.wrap{ width:100%; max-width:420px; }
+h1{ text-align:center; margin:6px 0 10px 0; font-size:14px; }
+
+table.score{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+table.score th,
+table.score td {
+  border: 2px solid #fff;
+  padding:4px 4px;
+  text-align:center;
+}
+
+thead th:first-child,
+tbody td:first-child,
+tfoot td:first-child {
+  text-align:left;
+  padding-left:5px;
+  font-weight:600;
+  color:var(--accent);
+  width:60px;
+  background:#222;
+}
+
+thead th.playerHeader {
+  width:40%;
+}
+
+/* --- Namn-fält --- */
+thead th.playerHeader input.player-name {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  color: #000;
+  font-weight: 800;
+  text-align: center;
+  font-size: 15.5px;
+  padding: 6px 4px;
+  box-sizing: border-box;
+  transition: background 0.2s, border 0.2s;
+}
+thead th.playerHeader input.player-name:focus {
+  background: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.8);
+  outline: none;
+}
+
+input.num {
+  width:100%;
+  box-sizing:border-box;
+  border:0;
+  background:transparent;
+  color:var(--chalk);
+  font-size:17.5px;
+  text-align:center;
+  padding:4px 2px;
+}
+input.num:focus { outline:2px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); }
+
+tfoot td.total {
+  background: var(--total-bg);
+  color: #ffe7e7;
+  font-weight:900;
+  text-align:center;
+  border: 2px solid #fff;
+  padding:10px 6px;
+}
+
+.controls{ display:flex; gap:8px; margin:8px 0; justify-content:center; }
+button {
+  background:rgba(255,255,255,0.04);
+  color:var(--chalk);
+  border:2px solid rgba(255,255,255,0.06);
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:700;
+  cursor:pointer;
+}
+button:disabled { opacity:0.5; cursor:not-allowed; }
+
+.compact input.num { font-size:16px; padding:3px 2px; }
+.compact thead th.playerHeader input.player-name { font-size:12px; padding:2px 2px; }
+
+/* --- Beräkningsrad längst ner, normalstorlek --- */
+.calc-buttons {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-5px);
+  width: auto;
+  max-width: 400px;
+  display: none;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.3);
+  box-shadow: 0px -2px 9px #02260f;
+  padding: 8px;
+  z-index: 999;
+  backdrop-filter: blur(5px);
+}
+.calc-buttons button {
+  flex: 1;
+  min-width: 50px;
+  font-size: 1.2rem;
+  padding: 12px 0;
+  background-color: rgba(255,255,255,0.3);
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  color: #000;
+  transition: background 0.3s, transform 0.2s;
+}
+.calc-buttons button:hover {
+  background-color: rgba(255,255,255,0.5);
+  transform: scale(1.05);
+}
+
+/* --- Meddelanderuta som liten pratbubbla överst --- */
+#msgPopup {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  width: auto;
+  max-width: 280px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.85);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  z-index: 1000;
+}
+#msgPopup.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(-50%) translateY(0);
+}
+#msgPopup .popup-content {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  height: auto;
+  overflow: visible;
+}
+#msgPopup .popup-close { display: none; }
+
+/* --- Popup för regler kvar som tidigare --- */
+.popup-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+.popup-overlay.active { opacity: 1; pointer-events: all; }
+
+.popup-content {
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(8px);
+  color: #000;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  height: 90%;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+  position: relative;
+  overflow-y: auto;
+  transform: scale(0.95);
+  transition: transform 0.6s ease;
+}
+.popup-content h2, .popup-content p, .popup-content ul, .popup-content li, .popup-content strong {
+  color: #000;
+}
+.popup-overlay.active .popup-content { transform: scale(1); }
+
+.popup-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #000;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+.popup-close:hover { color: red; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Half Scoreboard</h1>
+
+<div class="controls">
+  <button id="addPlayerBtn">+ Lägg till spelare</button>
+  <button id="resetBtn">Rensa poäng</button>
+  <button id="rulesBtn">Regler</button>
+</div>
+
+<!-- Popup för regler -->
+<div id="rulesPopup" class="popup-overlay">
+  <div class="popup-content">
+    <button class="popup-close" id="closePopupX">&times;</button>
+    <h2>Regler för Half Scoreboard</h2>
+    <p>• Spelet spelas i fasta mål i ordningen <strong>19 → Dubbel → 18 → Trippel → 17 → 41 → 20 → Bull</strong>.</p>
+    <p>• Vid Bull får man 25 poäng för den yttre och 50 för bullseye.</p>
+    <p>• Varje spelare skriver in sina poäng för varje mål i turordning.</p>
+    <p>• Om en spelare får 0 poäng på ett mål (och redan har poäng i spelet) halveras den totala poängen. (Avrundning sker uppåt)</p>
+    <p>• Vid målet <strong>41</strong> gäller ett specialfall:</p>
+    <ul>
+      <li>Får spelaren exakt 41 poäng adderas det som vanligt.</li>
+      <li>Får spelaren inte 41 (och redan har poäng) halveras den totala poängen.</li>
+    </ul>
+    <p>• Summan uppdateras löpande och vinnare är den som har högst totalpoäng när alla mål är spelade.</p>
+  </div>
+</div>
+
+<!-- Meddelanderuta -->
+<div id="msgPopup">
+  <div class="popup-content">
+    <p id="msgText"></p>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table class="score" id="scoreTable" aria-label="Half scoreboard">
+    <thead>
+      <tr id="headerRow"><th>Mål</th></tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+    <tfoot>
+      <tr id="totalsRow"><td>Summa</td></tr>
+    </tfoot>
+  </table>
+</div>
+</div>
+
+<div class="calc-buttons" id="calcButtons"></div>
+
+<script>
+const TARGETS = [
+  {key:'19', label:'19', type:'number'},
+  {key:'double', label:'Dubbel', type:'double'},
+  {key:'18', label:'18', type:'number'},
+  {key:'triple', label:'Trippel', type:'triple'},
+  {key:'17', label:'17', type:'number'},
+  {key:'41', label:'41', type:'sum41'},
+  {key:'20', label:'20', type:'number'},
+  {key:'bull', label:'Bull', type:'bull'}
+];
+const MAX_PLAYERS = 5;
+let playerCount = 2;
+
+const headerRow = document.getElementById('headerRow');
+const tbody = document.getElementById('tbody');
+const totalsRow = document.getElementById('totalsRow');
+const addBtn = document.getElementById('addPlayerBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+const floatCalc = document.getElementById('calcButtons');
+const operators = ['+','-','*','/','='];
+let activeInput = null;
+
+operators.forEach(op=>{
+  const btn = document.createElement('button');
+  btn.textContent = op;
+  if(op==='='){
+    btn.addEventListener('click', ()=>{
+      if(!activeInput) return;
+      const exp = (activeInput.value ?? '').toString().trim();
+      if (exp === '') {
+        showMessage('Fyll i poäng!');
+        floatCalc.style.display = 'none';
+        activeInput = null;
+        return;
+      }
+      try {
+        const result = eval(exp.replace(/×/g,'*').replace(/÷/g,'/'));
+        if (result === undefined || Number.isNaN(result)) {
+          showMessage('Fyll i poäng!');
+        } else {
+          activeInput.value = result;
+          calculateTotals();
+        }
+      } catch (e) {
+        showMessage('Du måste skriva korrekta siffror');
+      }
+      floatCalc.style.display = 'none';
+      activeInput = null;
+    });
+  } else {
+    btn.addEventListener('click', ()=>{
+      if(activeInput){ activeInput.value += op; activeInput.focus(); }
+    });
+  }
+  floatCalc.appendChild(btn);
+});
+
+function showMessage(text){
+  const msgPopup = document.getElementById('msgPopup');
+  const msgText  = document.getElementById('msgText');
+  msgText.textContent = text;
+  msgPopup.classList.add('active');
+  setTimeout(()=>msgPopup.classList.remove('active'), 2000);
+}
+
+buildTable();
+
+function buildTable(){
+  while(headerRow.children.length > 1) headerRow.removeChild(headerRow.lastChild);
+  for(let p=0;p<playerCount;p++){
+    const th = document.createElement('th');
+    th.className = 'playerHeader';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'player-name';
+    nameInput.value = 'Spelare ' + (p+1);
+    th.appendChild(nameInput);
+    headerRow.appendChild(th);
+  }
+
+  tbody.innerHTML = '';
+  TARGETS.forEach((t, rIdx) => {
+    const tr = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.textContent = t.label;
+    tr.appendChild(tdLabel);
+
+    for(let p=0;p<playerCount;p++){
+      const td = document.createElement('td');
+      const inp = document.createElement('input');
+      inp.type='text';
+      inp.className='num';
+      inp.inputMode='decimal';
+      inp.dataset.row=rIdx;
+      inp.dataset.player=p;
+
+      inp.addEventListener('focus', ()=>{
+        activeInput = inp;
+        floatCalc.style.display='flex';
+
+        // Flytta beräkningsfältet uppåt vid Bull
+        if(TARGETS[rIdx].key==='bull'){
+          floatCalc.style.bottom = '80px';
+        } else {
+          floatCalc.style.bottom = '10px';
+        }
+      });
+      inp.addEventListener('input', calculateTotals);
+      inp.addEventListener('keydown', e=>{
+        if(e.key==='Enter'){ e.preventDefault(); calculateTotals(); }
+      });
+
+      td.appendChild(inp);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+
+  while(totalsRow.children.length > 1) totalsRow.removeChild(totalsRow.lastChild);
+  for(let p=0;p<playerCount;p++){
+    const td = document.createElement('td');
+    td.className='total';
+    td.innerText='0';
+    totalsRow.appendChild(td);
+  }
+
+  if(playerCount>3) document.querySelector('.wrap').classList.add('compact'); 
+  else document.querySelector('.wrap').classList.remove('compact');
+
+  addBtn.disabled = playerCount>=MAX_PLAYERS;
+  calculateTotals();
+}
+
+function calculateTotals(){
+  const totals = Array(playerCount).fill(0);
+  for(let p=0;p<playerCount;p++){
+    let total=0;
+    for(let r=0;r<TARGETS.length;r++){
+      const input = document.querySelector(`input.num[data-row="${r}"][data-player="${p}"]`);
+      if(!input) break;
+      const raw = (input.value===undefined)?'':String(input.value).trim();
+      if(raw==='') break;
+      let val=parseInt(raw,10);
+      if(isNaN(val)) val=0;
+      const type=TARGETS[r].type;
+      if(type==='sum41'){ if(val===41) total+=41; else if(total!==0) total=Math.ceil(total/2); }
+      else { if(val===0 && total!==0) total=Math.ceil(total/2); else total+=val; }
+    }
+    totals[p]=total;
+  }
+  const footerCells = totalsRow.children;
+  for(let p=0;p<playerCount;p++){ if(footerCells[p+1]) footerCells[p+1].innerText=totals[p]; }
+}
+
+addBtn.addEventListener('click', ()=>{
+  if(playerCount>=MAX_PLAYERS) return;
+  playerCount++;
+  buildTable();
+});
+
+resetBtn.addEventListener('click', ()=>{
+  if(!confirm('Rensa alla inmatade poäng?')) return;
+  document.querySelectorAll('input.num').forEach(i=>i.value='');
+  Array.from(totalsRow.children).slice(1).forEach(td=>td.innerText='0');
+});
+
+const rulesPopup = document.getElementById('rulesPopup');
+const closePopupX = document.getElementById('closePopupX');
+document.getElementById('rulesBtn').addEventListener('click', () => rulesPopup.classList.add('active'));
+closePopupX.addEventListener('click', () => rulesPopup.classList.remove('active'));
+rulesPopup.addEventListener('click', (e) => { if (e.target === rulesPopup) rulesPopup.classList.remove('active'); });
+</script>
+</body>
+</html>
