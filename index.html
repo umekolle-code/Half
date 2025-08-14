@@ -22,7 +22,7 @@ body{
   justify-content:center;
   padding:4px;
 }
-.wrap{ width:100%; max-width:420px; }
+.wrap{ width:100%; max-width:420px; position: relative; }
 h1{ text-align:center; margin:6px 0 10px 0; font-size:14px; }
 
 table.score{
@@ -109,14 +109,9 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
 .compact input.num { font-size:16px; padding:3px 2px; }
 .compact thead th.playerHeader input.player-name { font-size:12px; padding:2px 2px; }
 
-/* --- Beräkningsrad längst ner, normalstorlek --- */
+/* --- Beräkningsrad ovanför aktiv poängruta --- */
 .calc-buttons {
-  position: fixed;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-5px);
-  width: auto;
-  max-width: 400px;
+  position: absolute;
   display: none;
   justify-content: center;
   gap: 5px;
@@ -143,7 +138,7 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
   transform: scale(1.05);
 }
 
-/* --- Meddelanderuta som liten pratbubbla överst --- */
+/* --- Meddelanderuta --- */
 #msgPopup {
   position: fixed;
   top: 10px;
@@ -166,16 +161,8 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
   pointer-events: all;
   transform: translateX(-50%) translateY(0);
 }
-#msgPopup .popup-content {
-  background: none;
-  box-shadow: none;
-  padding: 0;
-  height: auto;
-  overflow: visible;
-}
-#msgPopup .popup-close { display: none; }
 
-/* --- Popup för regler kvar som tidigare --- */
+/* --- Popup för regler --- */
 .popup-overlay {
   position: fixed;
   top: 0; left: 0;
@@ -205,9 +192,6 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
   transform: scale(0.95);
   transition: transform 0.6s ease;
 }
-.popup-content h2, .popup-content p, .popup-content ul, .popup-content li, .popup-content strong {
-  color: #000;
-}
 .popup-overlay.active .popup-content { transform: scale(1); }
 
 .popup-close {
@@ -221,7 +205,6 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
   background: none;
   border: none;
 }
-.popup-close:hover { color: red; }
 </style>
 </head>
 <body>
@@ -240,15 +223,6 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
     <button class="popup-close" id="closePopupX">&times;</button>
     <h2>Regler för Half Scoreboard</h2>
     <p>• Spelet spelas i fasta mål i ordningen <strong>19 → Dubbel → 18 → Trippel → 17 → 41 → 20 → Bull</strong>.</p>
-    <p>• Vid Bull får man 25 poäng för den yttre och 50 för bullseye.</p>
-    <p>• Varje spelare skriver in sina poäng för varje mål i turordning.</p>
-    <p>• Om en spelare får 0 poäng på ett mål (och redan har poäng i spelet) halveras den totala poängen. (Avrundning sker uppåt)</p>
-    <p>• Vid målet <strong>41</strong> gäller ett specialfall:</p>
-    <ul>
-      <li>Får spelaren exakt 41 poäng adderas det som vanligt.</li>
-      <li>Får spelaren inte 41 (och redan har poäng) halveras den totala poängen.</li>
-    </ul>
-    <p>• Summan uppdateras löpande och vinnare är den som har högst totalpoäng när alla mål är spelade.</p>
   </div>
 </div>
 
@@ -270,9 +244,9 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
     </tfoot>
   </table>
 </div>
-</div>
 
 <div class="calc-buttons" id="calcButtons"></div>
+</div>
 
 <script>
 const TARGETS = [
@@ -374,14 +348,14 @@ function buildTable(){
 
       inp.addEventListener('focus', ()=>{
         activeInput = inp;
-        floatCalc.style.display='flex';
+        floatCalc.style.display = 'flex';
 
-        // Flytta beräkningsfältet uppåt vid Bull
-        if(TARGETS[rIdx].key==='bull'){
-          floatCalc.style.bottom = '80px';
-        } else {
-          floatCalc.style.bottom = '10px';
-        }
+        const rect = inp.getBoundingClientRect();
+        const wrapRect = document.querySelector('.wrap').getBoundingClientRect();
+
+        floatCalc.style.top = (rect.top - wrapRect.top - floatCalc.offsetHeight - 8) + 'px';
+        floatCalc.style.left = '50%';
+        floatCalc.style.transform = 'translateX(-50%)';
       });
       inp.addEventListener('input', calculateTotals);
       inp.addEventListener('keydown', e=>{
