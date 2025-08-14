@@ -60,9 +60,9 @@ thead th.playerHeader input.player-name {
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.3);
   color: #000;
-  font-weight: 800;
+  font-weight: 600;       /* mindre tjockt */
   text-align: center;
-  font-size: 15.5px;
+  font-size: 14px;        /* lite mindre storlek */
   padding: 6px 4px;
   box-sizing: border-box;
   transition: background 0.2s, border 0.2s;
@@ -106,8 +106,10 @@ button {
 }
 button:disabled { opacity:0.5; cursor:not-allowed; }
 
-.compact input.num { font-size:16px; padding:3px 2px; }
-.compact thead th.playerHeader input.player-name { font-size:12px; padding:2px 2px; }
+/* --- Fast rad-höjd för alla rader --- */
+tbody tr {
+  height: 36px;
+}
 
 /* --- Beräkningsrad ovanför aktiv poängruta --- */
 .calc-buttons {
@@ -249,6 +251,7 @@ button:disabled { opacity:0.5; cursor:not-allowed; }
 </div>
 
 <script>
+// --- Samma JS som tidigare ---
 const TARGETS = [
   {key:'19', label:'19', type:'number'},
   {key:'double', label:'Dubbel', type:'double'},
@@ -375,9 +378,6 @@ function buildTable(){
     td.innerText='0';
     totalsRow.appendChild(td);
   }
-
-  if(playerCount>3) document.querySelector('.wrap').classList.add('compact'); 
-  else document.querySelector('.wrap').classList.remove('compact');
 
   addBtn.disabled = playerCount>=MAX_PLAYERS;
   calculateTotals();
